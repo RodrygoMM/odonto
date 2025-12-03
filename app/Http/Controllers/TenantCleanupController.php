@@ -16,7 +16,7 @@ class TenantCleanupController extends Controller
     /**
      * Lista todos os tenants (CNPJs matriz) para limpeza em ambiente de desenvolvimento.
      *
-     * Não exige login, mas é bloqueado em produção.
+     * Não exige login (rota pública), mas é bloqueado em produção.
      */
     public function index(Request $request): View
     {
@@ -33,7 +33,14 @@ class TenantCleanupController extends Controller
 
     /**
      * Exclui um tenant inteiro (CNPJ matriz) e tudo ligado a ele.
-     * Apenas para ambiente de desenvolvimento. Não exige login.
+     *
+     * Fluxo em cascata começando pela tabela users:
+     *  - apaga usuários do tenant
+     *  - apaga registros fiscais (cnpj_registrations)
+     *  - apaga unidades (units)
+     *  - apaga o próprio tenant
+     *
+     * Apenas para ambiente de desenvolvimento. Rota aberta (sem login).
      */
     public function destroy(Request $request, Tenant $tenant): RedirectResponse
     {
@@ -42,21 +49,21 @@ class TenantCleanupController extends Controller
         }
 
         DB::transaction(function () use ($tenant) {
-            // Apaga registros fiscais ligados ao tenant
-            CnpjRegistration::where('tenant_id', $tenant->id)->delete();
-
-            // Apaga usuários ligados ao tenant
+            // 1) Apaga usuários ligados ao tenant (tabela users)
             User::where('tenant_id', $tenant->id)->delete();
 
-            // Apaga unidades ligadas ao tenant
+            // 2) Apaga registros fiscais ligados ao tenant
+            CnpjRegistration::where('tenant_id', $tenant->id)->delete();
+
+            // 3) Apaga unidades ligadas ao tenant
             Unit::where('tenant_id', $tenant->id)->delete();
 
-            // Por fim, apaga o próprio tenant
+            // 4) Apaga o próprio tenant
             $tenant->delete();
         });
 
         return redirect()
             ->route('dev.tenants.index')
-            ->with('status', 'Tenant (CNPJ matriz + usuários + unidades) excluído com sucesso.');
+            ->with('status', 'Tenant (CNPJ matriz, usuários, unidades e CNPJs) excluído com sucesso.');
     }
 }
