@@ -3,6 +3,7 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use App\Http\Middleware\TenantContext;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -11,7 +12,12 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // Aqui você pode configurar aliases e grupos de middleware.
+
+        // Adiciona o TenantContext em TODAS as rotas web
+        $middleware->web(append: [
+            TenantContext::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
