@@ -26,6 +26,13 @@
                     <x-nav-link :href="route('units.index')" :active="request()->routeIs('units.*')">
                         {{ __('Rede do Cliente') }}
                     </x-nav-link>
+
+                    {{-- Precificação de Licenças - visível apenas para o CPF autorizado --}}
+                    @if ($user && $user->cpf === '05628981907')
+                        <x-nav-link :href="route('precificacao-licencas.index')" :active="request()->routeIs('precificacao-licencas.*')">
+                            {{ __('Precificação de Licenças') }}
+                        </x-nav-link>
+                    @endif
                 </div>
             </div>
 
@@ -149,6 +156,13 @@
             <x-responsive-nav-link :href="route('units.index')" :active="request()->routeIs('units.*')">
                 {{ __('Rede do Cliente') }}
             </x-responsive-nav-link>
+
+            {{-- Precificação de Licenças - visível apenas para o CPF autorizado (mobile) --}}
+            @if ($user && $user->cpf === '05628981907')
+                <x-responsive-nav-link :href="route('precificacao-licencas.index')" :active="request()->routeIs('precificacao-licencas.*')">
+                    {{ __('Precificação de Licenças') }}
+                </x-responsive-nav-link>
+            @endif
         </div>
 
         <!-- Responsive Settings Options -->

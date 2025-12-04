@@ -116,12 +116,12 @@ class RegisteredUserController extends Controller
         // 4) Cria Tenant, Matriz, User e espelho fiscal em transação
         $user = null;
 
-        DB::transaction(function () use (&$user, $validated, $cnpjNumerico, $cnpjData) {
+        DB::transaction(function () use (&$user, $validated, $cnpjNumerico, $cnpjData, $cpfNumerico) {
             // 4.1) Criar o Tenant (rede / cliente)
             $tenant = Tenant::create([
                 'nome_fantasia'  => $validated['name'],
                 'razao_social'   => $cnpjData['razao_social'] ?? null,
-                'cnpj_matriz'    => $validated['cnpj'],
+                'cnpj_matriz'    => $validated['cnpj'], // aqui pode ficar formatado se você quiser
                 'email_billing'  => $validated['email'],
                 'licenses_total' => 1,   // começa com 1 licença contratada
                 'licenses_used'  => 0,
@@ -132,18 +132,18 @@ class RegisteredUserController extends Controller
             $unit = Unit::create([
                 'tenant_id' => $tenant->id,
                 'nome'      => 'Matriz',
-                'cnpj'      => $validated['cnpj'],
+                'cnpj'      => $validated['cnpj'], // idem acima
                 'is_matriz' => true,
                 'ativo'     => true,
             ]);
 
-            // 4.3) Criar o usuário ADM
+            // 4.3) Criar o usuário ADM (CPF SEM pontuação)
             $user = User::create([
                 'tenant_id' => $tenant->id,
                 'unit_id'   => $unit->id,
                 'name'      => $validated['name'],
                 'email'     => $validated['email'],
-                'cpf'       => $validated['cpf'],
+                'cpf'       => $cpfNumerico, // <<< só dígitos
                 'password'  => Hash::make($validated['password']),
             ]);
 
@@ -151,7 +151,7 @@ class RegisteredUserController extends Controller
             CnpjRegistration::create([
                 'tenant_id' => $tenant->id,
                 'unit_id'   => $unit->id,
-                'cnpj'      => $cnpjData['cnpj'] ?? $validated['cnpj'],
+                'cnpj'      => $cnpjData['cnpj'] ?? $cnpjNumerico,
                 'razao_social' => $cnpjData['razao_social'] ?? null,
                 'nome_fantasia' => $cnpjData['nome_fantasia'] ?? null,
                 'tipo_estabelecimento' => $cnpjData['descricao_matriz_filial'] ?? 'MATRIZ',

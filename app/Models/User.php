@@ -22,11 +22,9 @@ class User extends Authenticatable
         'tenant_id',
         'unit_id',
         'name',
+        'cpf',
         'email',
         'password',
-        // aqui depois você pode adicionar:
-        // 'cpf',
-        // 'role',
     ];
 
     /**

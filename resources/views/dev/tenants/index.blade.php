@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" x-data="{ }">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -95,90 +95,21 @@
                                                     {{ optional($tenant->created_at)->format('d/m/Y H:i') }}
                                                 </td>
                                                 <td class="px-4 py-2">
-                                                    <div x-data="{ open: false }" class="inline-block">
+                                                    <form
+                                                        method="POST"
+                                                        action="{{ route('dev.tenants.destroy', $tenant) }}"
+                                                        onsubmit="return confirm('Tem certeza que deseja excluir COMPLETAMENTE este tenant, incluindo usuários, unidades e registros de CNPJ?')"
+                                                    >
+                                                        @csrf
+                                                        @method('DELETE')
+
                                                         <button
-                                                            type="button"
-                                                            @click="open = true"
+                                                            type="submit"
                                                             class="inline-flex items-center px-3 py-1 border border-red-600 rounded-md text-xs font-semibold text-red-600 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
                                                         >
                                                             Excluir tudo
                                                         </button>
-
-                                                        <!-- Modal -->
-                                                        <div
-                                                            x-show="open"
-                                                            x-cloak
-                                                            class="fixed inset-0 flex items-center justify-center z-50"
-                                                        >
-                                                            <!-- backdrop -->
-                                                            <div
-                                                                class="fixed inset-0 bg-gray-800 bg-opacity-50"
-                                                                @click="open = false"
-                                                            ></div>
-
-                                                            <!-- modal content -->
-                                                            <div class="bg-white rounded-lg shadow-lg max-w-md w-full mx-4 z-10">
-                                                                <div class="px-6 py-4 border-b">
-                                                                    <h3 class="text-lg font-semibold text-gray-800">
-                                                                        Confirmar exclusão total
-                                                                    </h3>
-                                                                </div>
-
-                                                                <div class="px-6 py-4 text-sm text-gray-700">
-                                                                    <p class="mb-2">
-                                                                        Tem certeza que deseja excluir este
-                                                                        <span class="font-semibold">tenant (CNPJ matriz)</span>
-                                                                        e <span class="font-semibold">tudo ligado a ele</span>?
-                                                                    </p>
-                                                                    <p class="mb-2">
-                                                                        <span class="font-semibold">Nome Fantasia:</span>
-                                                                        {{ $tenant->nome_fantasia ?? '—' }}
-                                                                    </p>
-                                                                    <p class="mb-2">
-                                                                        <span class="font-semibold">CNPJ:</span>
-                                                                        {{ $tenant->cnpj_matriz ?? '—' }}
-                                                                    </p>
-                                                                    @if ($adminUser)
-                                                                        <p class="mb-2">
-                                                                            <span class="font-semibold">Usuário:</span>
-                                                                            {{ $adminUser->name }} ({{ $adminUser->email }})
-                                                                        </p>
-                                                                    @endif
-                                                                    <p class="mt-3 text-xs text-red-600">
-                                                                        Esta ação irá apagar:
-                                                                        tenants, unidades, usuários e registros fiscais (CNPJ).
-                                                                        Não pode ser desfeita.
-                                                                    </p>
-                                                                </div>
-
-                                                                <div class="px-6 py-4 border-t flex justify-end space-x-3">
-                                                                    <button
-                                                                        type="button"
-                                                                        @click="open = false"
-                                                                        class="inline-flex items-center px-4 py-2 bg-gray-200 border border-transparent rounded-md font-semibold text-xs text-gray-800 uppercase tracking-widest hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
-                                                                    >
-                                                                        Cancelar
-                                                                    </button>
-
-                                                                    <form
-                                                                        method="POST"
-                                                                        action="{{ route('dev.tenants.destroy', $tenant) }}"
-                                                                    >
-                                                                        @csrf
-                                                                        @method('DELETE')
-
-                                                                        <button
-                                                                            type="submit"
-                                                                            class="inline-flex items-center px-4 py-2 bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-                                                                        >
-                                                                            Excluir definitivamente
-                                                                        </button>
-                                                                    </form>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <!-- /Modal -->
-                                                    </div>
+                                                    </form>
                                                 </td>
                                             </tr>
                                         @endforeach

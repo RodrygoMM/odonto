@@ -4,6 +4,8 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\TenantCleanupController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\PrecificacaoLicencaController;
+
 
 Route::get('/', function () {
     return view('welcome');
@@ -33,4 +35,18 @@ Route::middleware('auth')->group(function () {
 Route::get('/dev/tenants', [TenantCleanupController::class, 'index'])->name('dev.tenants.index');
 Route::delete('/dev/tenants/{tenant}', [TenantCleanupController::class, 'destroy'])->name('dev.tenants.destroy');
 
-require __DIR__.'/auth.php';
+
+
+
+
+
+
+
+// ...
+
+Route::middleware(['auth'])->group(function () {
+    Route::resource('precificacao-licencas', PrecificacaoLicencaController::class)
+        ->except(['show', 'destroy']);
+});
+
+require __DIR__ . '/auth.php';
