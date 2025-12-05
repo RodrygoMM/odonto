@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Validation\Rules;
 use Illuminate\View\View;
+use Carbon\Carbon;
 
 class RegisteredUserController extends Controller
 {
@@ -29,7 +30,7 @@ class RegisteredUserController extends Controller
 
     /**
      * Processa o registro de um novo cliente (Tenant + Matriz + User ADM + CNPJ da Matriz),
-     * com validação de CPF/CNPJ e situação cadastral ATIVA na Receita.
+     * com validação de CPF/CNPJ, MAIORIDADE (>= 18 anos) e situação cadastral ATIVA na Receita.
      *
      * @throws \Illuminate\Validation\ValidationException
      */
@@ -38,12 +39,20 @@ class RegisteredUserController extends Controller
         // 1) Validação básica de formulário e unicidade
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
+
             'cpf' => [
                 'required',
                 'string',
                 'max:14',
                 'unique:users,cpf',
             ],
+
+            'data_nascimento' => [
+                'required',
+                'date',
+                'before_or_equal:today',
+            ],
+
             'cnpj' => [
                 'required',
                 'string',
@@ -53,6 +62,7 @@ class RegisteredUserController extends Controller
                 // nem em outra unidade (matriz ou filial)
                 'unique:units,cnpj',
             ],
+
             'email' => [
                 'required',
                 'string',
@@ -61,6 +71,7 @@ class RegisteredUserController extends Controller
                 'max:255',
                 'unique:' . User::class,
             ],
+
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
@@ -80,7 +91,15 @@ class RegisteredUserController extends Controller
                 ->withInput();
         }
 
-        // 3) Consulta Receita via BrasilAPI e exige situação cadastral ATIVA
+        // 3) Verifica se é MAIOR DE 18 anos
+        $dataNascimento = Carbon::parse($validated['data_nascimento']);
+        if ($dataNascimento->age < 18) {
+            return back()
+                ->withErrors(['data_nascimento' => 'Você precisa ter pelo menos 18 anos para se cadastrar.'])
+                ->withInput();
+        }
+
+        // 4) Consulta Receita via BrasilAPI e exige situação cadastral ATIVA
         try {
             $response = Http::get("https://brasilapi.com.br/api/cnpj/v1/{$cnpjNumerico}");
         } catch (\Throwable $e) {
@@ -113,41 +132,48 @@ class RegisteredUserController extends Controller
                 ->withInput();
         }
 
-        // 4) Cria Tenant, Matriz, User e espelho fiscal em transação
+        // 5) Cria Tenant, Matriz, User e espelho fiscal em transação
         $user = null;
 
-        DB::transaction(function () use (&$user, $validated, $cnpjNumerico, $cnpjData, $cpfNumerico) {
-            // 4.1) Criar o Tenant (rede / cliente)
+        DB::transaction(function () use (&$user, $validated, $cnpjNumerico, $cnpjData, $cpfNumerico, $dataNascimento) {
+            // 5.1) Criar o Tenant (rede / cliente)
             $tenant = Tenant::create([
                 'nome_fantasia'  => $validated['name'],
                 'razao_social'   => $cnpjData['razao_social'] ?? null,
-                'cnpj_matriz'    => $validated['cnpj'], // aqui pode ficar formatado se você quiser
+                'cnpj_matriz'    => $validated['cnpj'], // pode ficar formatado
                 'email_billing'  => $validated['email'],
                 'licenses_total' => 1,   // começa com 1 licença contratada
                 'licenses_used'  => 0,
                 'ativo'          => true,
             ]);
 
-            // 4.2) Criar a unidade matriz
+            // 5.2) Criar a unidade matriz
             $unit = Unit::create([
                 'tenant_id' => $tenant->id,
                 'nome'      => 'Matriz',
-                'cnpj'      => $validated['cnpj'], // idem acima
+                'cnpj'      => $validated['cnpj'],
                 'is_matriz' => true,
                 'ativo'     => true,
             ]);
 
-            // 4.3) Criar o usuário ADM (CPF SEM pontuação)
+            // 5.3) Criar o usuário ADM
+            //      - cpf SEM pontuação
+            //      - data_nascimento
+            //      - ativo = true
+            //      - monetizado = false
             $user = User::create([
-                'tenant_id' => $tenant->id,
-                'unit_id'   => $unit->id,
-                'name'      => $validated['name'],
-                'email'     => $validated['email'],
-                'cpf'       => $cpfNumerico, // <<< só dígitos
-                'password'  => Hash::make($validated['password']),
+                'tenant_id'       => $tenant->id,
+                'unit_id'         => $unit->id,
+                'name'            => $validated['name'],
+                'email'           => $validated['email'],
+                'cpf'             => $cpfNumerico,
+                'data_nascimento' => $dataNascimento->format('Y-m-d'),
+                'ativo'           => true,
+                'monetizado'      => false,
+                'password'        => Hash::make($validated['password']),
             ]);
 
-            // 4.4) Salvar espelho fiscal do CNPJ da matriz
+            // 5.4) Salvar espelho fiscal do CNPJ da matriz
             CnpjRegistration::create([
                 'tenant_id' => $tenant->id,
                 'unit_id'   => $unit->id,

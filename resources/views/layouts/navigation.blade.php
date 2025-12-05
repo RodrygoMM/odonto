@@ -1,8 +1,8 @@
 <nav x-data="{ open: false }" class="bg-white border-b border-gray-100">
     @php
-        $user   = Auth::user();
-        $tenant = $user?->tenant;
-        $unit   = $user?->unit;
+        $user = Auth::user();
+        $tenant = $user?->tenant; // ainda existe no contexto, mas não exibimos mais o nome
+        $unit = $user?->unit;
     @endphp
 
     <!-- Primary Navigation Menu -->
@@ -27,6 +27,11 @@
                         {{ __('Rede do Cliente') }}
                     </x-nav-link>
 
+                    {{-- Convite de usuários (matriz e filial podem acessar) --}}
+                    <x-nav-link :href="route('users.invite.create')" :active="request()->routeIs('users.invite.*')">
+                        {{ __('Convidar Usuário') }}
+                    </x-nav-link>
+
                     {{-- Precificação de Licenças - visível apenas para o CPF autorizado --}}
                     @if ($user && $user->cpf === '05628981907')
                         <x-nav-link :href="route('precificacao-licencas.index')" :active="request()->routeIs('precificacao-licencas.*')">
@@ -36,16 +41,8 @@
                 </div>
             </div>
 
-            <!-- Info de Tenant / Unidade (desktop) -->
+            <!-- Info de Unidade (desktop) -->
             <div class="hidden sm:flex sm:flex-col sm:items-end sm:justify-center sm:mx-4 text-right text-xs text-gray-600">
-                @if ($tenant)
-                    <div>
-                        <span class="font-semibold">
-                            {{ $tenant->nome_fantasia }}
-                        </span>
-                    </div>
-                @endif
-
                 @if ($unit)
                     <div>
                         Unidade: {{ $unit->nome }}
@@ -81,11 +78,6 @@
 
                     <x-slot name="content">
                         <div class="px-4 py-2 text-xs text-gray-500 border-b">
-                            @if ($tenant)
-                                <div class="font-semibold">
-                                    {{ $tenant->nome_fantasia }}
-                                </div>
-                            @endif
                             @if ($unit)
                                 <div>
                                     Unidade: {{ $unit->nome }}
@@ -157,6 +149,11 @@
                 {{ __('Rede do Cliente') }}
             </x-responsive-nav-link>
 
+            {{-- Convite de usuários (mobile) --}}
+            <x-responsive-nav-link :href="route('users.invite.create')" :active="request()->routeIs('users.invite.*')">
+                {{ __('Convidar Usuário') }}
+            </x-responsive-nav-link>
+
             {{-- Precificação de Licenças - visível apenas para o CPF autorizado (mobile) --}}
             @if ($user && $user->cpf === '05628981907')
                 <x-responsive-nav-link :href="route('precificacao-licencas.index')" :active="request()->routeIs('precificacao-licencas.*')">
@@ -171,14 +168,8 @@
                 <div class="font-medium text-base text-gray-800">{{ $user->name }}</div>
                 <div class="font-medium text-sm text-gray-500">{{ $user->email }}</div>
 
-                @if ($tenant)
-                    <div class="mt-1 text-xs text-gray-600">
-                        {{ $tenant->nome_fantasia }}
-                    </div>
-                @endif
-
                 @if ($unit)
-                    <div class="text-xs text-gray-600">
+                    <div class="mt-1 text-xs text-gray-600">
                         Unidade: {{ $unit->nome }}
                         @if($unit->is_matriz)
                             (Matriz)

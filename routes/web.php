@@ -3,50 +3,71 @@
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\TenantCleanupController;
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PrecificacaoLicencaController;
+use App\Http\Controllers\InviteUserController; // <-- ADICIONADO
+use Illuminate\Support\Facades\Route;
 
-
+// Página inicial
 Route::get('/', function () {
     return view('welcome');
 });
 
+// Dashboard
 Route::get('/dashboard', function () {
     return view('dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
+// Rotas protegidas por autenticação
 Route::middleware('auth')->group(function () {
-    // Profile
+
+    /**
+     * Perfil do usuário
+     */
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    // Rede do cliente: unidades (matriz + filiais)
-    Route::get('/unidades', [UnitController::class, 'index'])->name('units.index');
-    Route::get('/unidades/criar', [UnitController::class, 'create'])->name('units.create');
-    Route::post('/unidades', [UnitController::class, 'store'])->name('units.store');
-    Route::get('/unidades/{unit}', [UnitController::class, 'show'])->name('units.show');
-    Route::get('/unidades/{unit}/editar', [UnitController::class, 'edit'])->name('units.edit');
-    Route::put('/unidades/{unit}', [UnitController::class, 'update'])->name('units.update');
-    Route::delete('/unidades/{unit}', [UnitController::class, 'destroy'])->name('units.destroy');
-});
+    /**
+     * Rede do cliente — Unidades (matriz + filiais)
+     */
+    Route::prefix('unidades')->name('units.')->group(function () {
+        Route::get('/', [UnitController::class, 'index'])->name('index');
+        Route::get('/criar', [UnitController::class, 'create'])->name('create');
+        Route::post('/', [UnitController::class, 'store'])->name('store');
 
-// Painel DEV de limpeza total de tenants (sem login, mas bloqueado em produção)
-Route::get('/dev/tenants', [TenantCleanupController::class, 'index'])->name('dev.tenants.index');
-Route::delete('/dev/tenants/{tenant}', [TenantCleanupController::class, 'destroy'])->name('dev.tenants.destroy');
+        Route::get('/{unit}', [UnitController::class, 'show'])->name('show');
+        Route::get('/{unit}/editar', [UnitController::class, 'edit'])->name('edit');
+        Route::put('/{unit}', [UnitController::class, 'update'])->name('update');
+        Route::delete('/{unit}', [UnitController::class, 'destroy'])->name('destroy');
+    });
 
+    /**
+     * Convite de novos usuários (pré-cadastro de colaboradores)
+     *
+     * - Matriz: pode escolher qualquer unidade (CNPJ) do tenant
+     * - Filial: sempre vincula à própria unidade (CNPJ travado)
+     */
+    Route::prefix('usuarios')->name('users.')->group(function () {
+        // Formulário de convite
+        Route::get('/convidar', [InviteUserController::class, 'create'])
+            ->name('invite.create');
 
+        // Processa o envio do convite / pré-cadastro
+        Route::post('/convidar', [InviteUserController::class, 'store'])
+            ->name('invite.store');
+    });
 
-
-
-
-
-
-// ...
-
-Route::middleware(['auth'])->group(function () {
+    /**
+     * Precificação de licenças
+     */
     Route::resource('precificacao-licencas', PrecificacaoLicencaController::class)
         ->except(['show', 'destroy']);
+});
+
+// Painel DEV — limpeza total de tenants (perigoso, bloquear em produção)
+Route::prefix('dev')->name('dev.')->group(function () {
+    Route::get('/tenants', [TenantCleanupController::class, 'index'])->name('tenants.index');
+    Route::delete('/tenants/{tenant}', [TenantCleanupController::class, 'destroy'])->name('tenants.destroy');
 });
 
 require __DIR__ . '/auth.php';

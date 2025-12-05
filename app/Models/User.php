@@ -23,6 +23,9 @@ class User extends Authenticatable
         'unit_id',
         'name',
         'cpf',
+        'data_nascimento',
+        'ativo',
+        'monetizado',
         'email',
         'password',
     ];
@@ -46,6 +49,9 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'data_nascimento'   => 'date',
+            'ativo'             => 'boolean',
+            'monetizado'        => 'boolean',
             'password'          => 'hashed',
         ];
     }
